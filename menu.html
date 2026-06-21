@@ -1,4 +1,15 @@
-
+function MostrarMenu() {
+  return (
+    <div className="menu-container">
+      {menu.map((burger) => (
+        <div key={burger.id} className="burger-card">
+          <h3>{burger.nombre}</h3>
+          <p>{burger.descripcion}</p>
+          <span>${burger.precio.toLocaleString('es-AR')}</span>
+          <button>Agregar al carrito</button>
+        </div>
+      ))}
+    </div>
   {
     "id": "abuela",
     "nombre": "Abuela (La la la la la 🎵)",
