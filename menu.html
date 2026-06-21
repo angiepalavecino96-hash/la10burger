@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú - La 10 Burger</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px 0;
+            border-bottom: 2px solid #ffcc00;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            color: #ffcc00;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+        }
+
+        header p {
+            color: #aaaaaa;
+            font-style: italic;
+        }
+
+        .category-title {
+            color: #ffcc00;
+            font-size: 1.8rem;
+            margin: 30px 0 15px 0;
+            text-transform: uppercase;
+            border-left: 4px solid #ffcc00;
+            padding-left: 10px;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .menu-item {
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s;
+        }
+
+        .menu-item:hover {
+            transform: translateY(-5px);
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .item-name {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .item-price {
+            font-size: 1.3rem;
+            color: #ffcc00;
+            font-weight: bold;
+            background-color: #2a2a2a;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        .item-description {
+            color: #bbbbbb;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            color: #666666;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>La 10 Burger</h1>
+        <p>Las mejores hamburguesas de la zona</p>
+    </header>
+
+    <main>
+        <!-- SECCIÓN HAMBURGUESAS -->
+        <h2 class="category-title">🍔 Hamburguesas</h2>
+        <div class="menu-grid">
+            
+            <div class="menu-item">
+                <div class="item-header">
+                    <span class="item-name">La 10 Clásica</span>
+                    <span class="item-price">$6.500</span>
+                </div>
+                <p class="item-description">Medallón de carne 120g, queso cheddar, lechuga, tomate y salsa de la casa.</p>
+            </div>
+
+            <div class="menu-item">
+                <div class="item-header">
+                    <span class="item-name">La Bicampeona</span>
+                    <span class="item-price">$8.200</span>
+                </div>
+                <p class="item-description">Doble medallón de carne, doble cheddar, bacon crocante y cebolla caramelizada.</p>
+            </div>
+
+            <div class="menu-item">
+                <div class="item-header">
+                    <span class="item-name">Maradona Burger</span>
+                    <span class="item-price">$9.500</span>
+                </div>
+                <p class="item-description">Triple medallón, mucho cheddar, bacon, huevo frito y salsa barbacoa.</p>
+            </div>
+
+        </div>
+
+        <!-- SECCIÓN ADICIONALES Y BEBIDAS -->
+        <h2 class="category-title">🍟 Acompañamientos & Bebidas</h2>
+        <div class="menu-grid">
+
+            <div class="menu-item">
+                <div class="item-header">
+                    <span class="item-name">Papas Fritas Grandes</span>
+                    <span class="item-price">$3.500</span>
+                </div>
+                <p class="item-description">Porción abundante de papas rústicas, crujientes por fuera y suaves por dentro.</p>
+            </div>
+
+            <div class="menu-item">
+                <div class="item-header">
+                    <span class="item-name">Papas Cheddar & Bacon</span>
+                    <span class="item-price">$4.800</span>
+                </div>
+                <p class="item-description">Nuestras papas clásicas bañadas en queso cheddar fundido y lluvia de bacon crocante.</p>
+            </div>
+
+            <div class="menu-item">
+                <div class="item-header">
+                    <span class="item-name">Gaseosas (Línea Coca-Cola)</span>
+                    <span class="item-price">$1.800</span>
+                </div>
+                <p class="item-description">Lata de 354ml bien helada.</p>
+            </div>
+
+        </div>
+    </main>
+
+    <footer>
+        <p>© 2026 La 10 Burger - Creado con pasión</p>
+    </footer>
+
+</body>
+</html>
