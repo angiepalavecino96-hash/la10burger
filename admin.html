@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin · La 10 Burger</title>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+  :root{
+    --bg:#0B0B0D; --panel:#15151A; --cream:#F5F1E6;
+    --sky:#6CACE4; --flame:#E8590C; --line:#2A2A30; --muted:#8A8A92;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; background:var(--bg); color:var(--cream); font-family:'DM Sans', sans-serif; }
+  .wrap{ max-width:640px; margin:0 auto; padding:40px 20px; }
+  h1{ font-family:'Anton', sans-serif; letter-spacing:1px; text-transform:uppercase; font-size:26px; margin-bottom:4px; }
+  .sub{ color:var(--muted); margin-bottom:28px; }
+  .login-box{ background:var(--panel); border:1px solid var(--line); padding:24px; border-radius:6px; }
+  input{
+    width:100%; padding:12px; background:var(--bg); border:1px solid var(--line);
+    color:var(--cream); border-radius:4px; font-size:15px; margin-bottom:12px;
+  }
+  button{
+    background:var(--sky); color:#0B0B0D; border:none; font-family:'Anton', sans-serif;
+    letter-spacing:1px; text-transform:uppercase; padding:12px 20px; border-radius:4px;
+    cursor:pointer; font-size:13px;
+  }
+  table{ width:100%; border-collapse:collapse; margin-top:10px; }
+  th, td{ text-align:left; padding:12px 8px; border-bottom:1px solid var(--line); font-size:14px; }
+  th{ color:var(--muted); text-transform:uppercase; font-size:11px; letter-spacing:1px; }
+  td input{ width:110px; margin:0; padding:8px; }
+  .row-btn{ padding:8px 14px; font-size:11px; }
+  .msg{ margin-top:14px; padding:10px; border-radius:4px; font-size:13px; display:none; }
+  .msg.ok{ background:#1d3a23; color:#8be39a; display:block; }
+  .msg.err{ background:#3a1d1d; color:#e88989; display:block; }
+  .hidden{ display:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Panel de Stock</h1>
+  <p class="sub">La 10 Burger — cargá las cantidades disponibles de cada insumo</p>
+
+  <div id="loginBox" class="login-box">
+    <input type="password" id="password" placeholder="Contraseña de administrador">
+    <button onclick="entrar()">Entrar</button>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+
+  <div id="panel" class="hidden">
+    <table>
+      <thead>
+        <tr><th>Insumo</th><th>Unidad</th><th>Stock actual</th><th></th></tr>
+      </thead>
+      <tbody id="tablaBody"></tbody>
+    </table>
+    <div class="msg" id="panelMsg"></div>
+  </div>
+</div>
+
+<script>
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let PASSWORD = '';
+
+async function entrar(){
+  PASSWORD = document.getElementById('password').value;
+  if(!PASSWORD){ return; }
+
+  const { data, error } = await supabase.from('insumos').select('*').order('id_insumo');
+  if(error){
+    document.getElementById('loginMsg').className = 'msg err';
+    document.getElementById('loginMsg').textContent = 'Error de conexión. Revisá config.js';
+    return;
+  }
+
+  document.getElementById('loginBox').classList.add('hidden');
+  document.getElementById('panel').classList.remove('hidden');
+
+  const tbody = document.getElementById('tablaBody');
+  tbody.innerHTML = '';
+  data.forEach(insumo => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${insumo.nombre}</td>
+      <td>${insumo.unidad}</td>
+      <td><input type="number" step="0.5" value="${insumo.stock_actual}" id="stock-${insumo.id_insumo}"></td>
+      <td><button class="row-btn" onclick="guardar(${insumo.id_insumo})">Guardar</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function guardar(id_insumo){
+  const nuevo_stock = Number(document.getElementById('stock-' + id_insumo).value);
+  const msg = document.getElementById('panelMsg');
+
+  const res = await fetch('/.netlify/functions/update-stock', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: PASSWORD, id_insumo, nuevo_stock })
+  });
+  const result = await res.json();
+
+  if(result.error){
+    msg.className = 'msg err';
+    msg.textContent = 'Error: ' + result.error;
+  } else {
+    msg.className = 'msg ok';
+    msg.textContent = 'Stock actualizado ✓';
+  }
+  setTimeout(()=> msg.className = 'msg', 2500);
+}
+</script>
+</body>
+</html>
