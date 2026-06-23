@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La 10 Burger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+  :root{
+    --bg:#0B0B0D; --panel:#15151A; --cream:#F5F1E6;
+    --sky:#6CACE4; --flame:#E8590C; --line:#2A2A30; --muted:#8A8A92;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; background:var(--bg); color:var(--cream); font-family:'DM Sans', sans-serif; }
+  header{ padding:48px 24px 32px; text-align:center; position:relative; border-bottom:1px solid var(--line); }
+  .jersey-number{
+    font-family:'Anton', sans-serif; font-size:clamp(64px, 18vw, 140px); line-height:0.8;
+    color:var(--sky); -webkit-text-stroke: 2px var(--cream); margin:0;
+  }
+  header h1{ font-family:'Anton', sans-serif; font-size:clamp(22px, 5vw, 34px); letter-spacing:2px; margin:8px 0 4px; text-transform:uppercase; }
+  header p{ color:var(--muted); margin:0; font-style:italic; }
+
+  .grid{ max-width:1080px; margin:0 auto; padding:32px 20px 140px; display:grid; gap:18px; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); }
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:20px; position:relative; display:flex; flex-direction:column; gap:10px; transition:border-color .2s; }
+  .card:hover{ border-color:var(--sky); }
+  .card.agotado{ opacity:0.4; }
+  .card .num{ position:absolute; top:14px; right:16px; font-family:'Anton', sans-serif; color:var(--line); font-size:28px; }
+  .card h2{ margin:0; font-size:19px; text-transform:uppercase; letter-spacing:0.5px; padding-right:40px; }
+  .card .desc{ color:var(--muted); font-size:14px; line-height:1.5; margin:0; flex:1; }
+  .card select{ background:var(--bg); color:var(--cream); border:1px solid var(--line); padding:8px; border-radius:3px; font-family:'DM Sans'; font-size:13px; }
+  .card .footer{ display:flex; align-items:center; justify-content:space-between; margin-top:6px; padding-top:12px; border-top:1px dashed var(--line); }
+  .price{ font-family:'Anton', sans-serif; color:var(--flame); font-size:20px; }
+  button.agregar{
+    background:var(--sky); color:#0B0B0D; border:none; font-family:'Anton', sans-serif; letter-spacing:1px;
+    padding:10px 18px; border-radius:3px; cursor:pointer; text-transform:uppercase; font-size:13px;
+  }
+  button.agregar:disabled{ background:var(--line); color:var(--muted); cursor:not-allowed; }
+  .badge-agotado{
+    position:absolute; top:14px; left:16px; background:var(--flame); color:#fff; font-size:10px;
+    padding:3px 8px; border-radius:2px; letter-spacing:1px; text-transform:uppercase; font-family:'Anton', sans-serif;
+  }
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--cream); color:#0B0B0D;
+    padding:12px 22px; border-radius:4px; font-weight:700; opacity:0; transition:opacity .3s; pointer-events:none; z-index:200;
+  }
+  .toast.show{ opacity:1; }
+  footer{ text-align:center; color:var(--muted); font-size:12px; padding:24px; }
+
+  /* Carrito flotante */
+  #cartButton{
+    position:fixed; bottom:24px; right:24px; background:var(--flame); color:#fff; border:none;
+    border-radius:50px; padding:14px 22px; font-family:'Anton', sans-serif; letter-spacing:1px;
+    text-transform:uppercase; font-size:14px; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.4); z-index:150;
+  }
+  #cartButton .badge{
+    background:var(--cream); color:#0B0B0D; border-radius:50%; width:22px; height:22px;
+    display:inline-flex; align-items:center; justify-content:center; font-size:12px; margin-left:8px;
+  }
+  #cartPanel{
+    position:fixed; top:0; right:0; height:100%; width:min(380px, 100%); background:var(--panel);
+    border-left:1px solid var(--line); transform:translateX(100%); transition:transform .25s; z-index:300;
+    display:flex; flex-direction:column;
+  }
+  #cartPanel.open{ transform:translateX(0); }
+  #cartHeader{ padding:20px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
+  #cartHeader h3{ margin:0; font-family:'Anton', sans-serif; text-transform:uppercase; letter-spacing:1px; }
+  #cartHeader button{ background:none; border:none; color:var(--muted); font-size:22px; cursor:pointer; }
+  #cartItems{ flex:1; overflow-y:auto; padding:16px 20px; }
+  .cart-item{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; padding:12px 0; border-bottom:1px solid var(--line); }
+  .cart-item .info{ flex:1; }
+  .cart-item .info .nombre{ font-weight:700; font-size:14px; }
+  .cart-item .info .opcion{ color:var(--muted); font-size:12px; }
+  .qty-controls{ display:flex; align-items:center; gap:8px; margin-top:6px; }
+  .qty-controls button{
+    width:24px; height:24px; border-radius:3px; border:1px solid var(--line); background:var(--bg);
+    color:var(--cream); cursor:pointer; font-size:14px; line-height:1;
+  }
+  .qty-controls span{ min-width:20px; text-align:center; font-size:13px; }
+  .cart-item .subtotal{ color:var(--flame); font-weight:700; font-size:14px; white-space:nowrap; }
+  #cartFooter{ padding:20px; border-top:1px solid var(--line); }
+  #cartTotal{ display:flex; justify-content:space-between; margin-bottom:14px; font-family:'Anton', sans-serif; font-size:18px; }
+  #cartTotal span:last-child{ color:var(--flame); }
+  #confirmarBtn{
+    width:100%; background:var(--sky); color:#0B0B0D; border:none; padding:14px; border-radius:4px;
+    font-family:'Anton', sans-serif; letter-spacing:1px; text-transform:uppercase; font-size:14px; cursor:pointer;
+  }
+  #confirmarBtn:disabled{ background:var(--line); color:var(--muted); cursor:not-allowed; }
+  #overlay{ position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:250; display:none; }
+  #overlay.open{ display:block; }
+  .vacio{ color:var(--muted); text-align:center; padding:40px 0; font-size:14px; }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="jersey-number">10</p>
+  <h1>La 10 Burger</h1>
+  <p>Hamburguesas que juegan de titular</p>
+</header>
+
+<div class="grid" id="grid">
+  <p style="color:var(--muted); padding:20px;">Cargando menú...</p>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<button id="cartButton" onclick="abrirCarrito()">🛒 Carrito <span class="badge" id="cartCount">0</span></button>
+
+<div id="overlay" onclick="cerrarCarrito()"></div>
+<div id="cartPanel">
+  <div id="cartHeader">
+    <h3>Tu pedido</h3>
+    <button onclick="cerrarCarrito()">✕</button>
+  </div>
+  <div id="cartItems"></div>
+  <div id="cartFooter">
+    <input type="text" id="nombreCliente" placeholder="Nombre para el pedido" style="width:100%; padding:10px; margin-bottom:8px; background:var(--bg); border:1px solid var(--line); color:var(--cream); border-radius:4px; font-family:'DM Sans'; font-size:14px;">
+    <input type="tel" id="telefonoCliente" placeholder="Teléfono (WhatsApp)" style="width:100%; padding:10px; margin-bottom:12px; background:var(--bg); border:1px solid var(--line); color:var(--cream); border-radius:4px; font-family:'DM Sans'; font-size:14px;">
+    <div id="cartTotal"><span>Total</span><span id="cartTotalNum">$0</span></div>
+    <button id="confirmarBtn" onclick="confirmarPedido()">Confirmar pedido</button>
+  </div>
+</div>
+
+<footer>La 10 Burger — Panel de administración: <a href="admin.html" style="color:var(--sky);">acceso staff</a> · <a href="pedidos.html" style="color:var(--sky);">ver pedidos</a></footer>
+
+<script>
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const grid = document.getElementById('grid');
+const toast = document.getElementById('toast');
+let cart = []; // { id_variacion, id_modificador, nombre, opcionNombre, precio, qty, dispoMax }
+let menuData = []; // cache de productos+disponibilidad para validar límites
+
+function showToast(msg){
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(()=> toast.classList.remove('show'), 2500);
+}
+
+async function cargarMenu(){
+  const { data: productos, error: e1 } = await sb.from('productos_variaciones').select('*').eq('activo', true).order('id_variacion');
+  const { data: disponibilidad, error: e2 } = await sb.rpc('disponibilidad_productos');
+  const { data: modificadores, error: e3 } = await sb.from('modificadores').select('*');
+
+  if(e1 || e2){ grid.innerHTML = '<p style="color:var(--flame)">Error cargando el menú. Revisá config.js</p>'; return; }
+
+  const dispoMap = {};
+  (disponibilidad||[]).forEach(d => dispoMap[d.id_variacion] = d.unidades_disponibles);
+
+  menuData = productos
+    .filter(p => !p.dias_disponibles || p.dias_disponibles.includes(new Date().getDay()))
+    .map(p => ({ ...p, dispo: dispoMap[p.id_variacion] ?? 0 }));
+
+  grid.innerHTML = '';
+  menuData.forEach((p, idx) => {
+    const agotado = p.dispo <= 0;
+    const mods = (modificadores||[]).filter(m => m.id_variacion === p.id_variacion);
+
+    const card = document.createElement('div');
+    card.className = 'card' + (agotado ? ' agotado' : '');
+    card.innerHTML = `
+      <span class="num">${String(idx+1).padStart(2,'0')}</span>
+      ${agotado ? '<span class="badge-agotado">Agotado</span>' : ''}
+      <h2>${p.nombre_producto}</h2>
+      <p class="desc">${p.descripcion || ''}</p>
+      ${mods.length ? `<select class="mod-select">${mods.map(m=>`<option value="${m.id_modificador}">${m.nombre}</option>`).join('')}</select>` : ''}
+      <label style="font-size:12px; color:var(--muted); display:flex; gap:6px; align-items:center; cursor:pointer;">
+        <input type="checkbox" class="sin-papas-check"> Cambiar papas por 10 aros de cebolla
+      </label>
+      <div class="footer">
+        <span class="price">$${Number(p.precio).toLocaleString('es-AR')}</span>
+        <button class="agregar" ${agotado?'disabled':''}>Agregar</button>
+      </div>
+    `;
+    const btn = card.querySelector('.agregar');
+    btn.addEventListener('click', () => {
+      const modSelect = card.querySelector('.mod-select');
+      const id_modificador = modSelect ? Number(modSelect.value) : null;
+      const opcionNombre = modSelect ? modSelect.options[modSelect.selectedIndex].text : null;
+      const sinPapas = card.querySelector('.sin-papas-check')?.checked || false;
+      agregarAlCarrito(p, id_modificador, opcionNombre, sinPapas);
+    });
+    grid.appendChild(card);
+  });
+}
+
+function agregarAlCarrito(producto, id_modificador, opcionNombre, sinPapas){
+  const existente = cart.find(item => item.id_variacion === producto.id_variacion && item.id_modificador === id_modificador && item.sinPapas === sinPapas);
+  if(existente){
+    existente.qty += 1;
+  } else {
+    cart.push({
+      id_variacion: producto.id_variacion,
+      id_modificador: id_modificador,
+      nombre: producto.nombre_producto,
+      opcionNombre: opcionNombre,
+      sinPapas: sinPapas,
+      precio: Number(producto.precio),
+      qty: 1
+    });
+  }
+  showToast('Agregado al carrito 🛒');
+  renderCarrito();
+  abrirCarrito();
+}
+
+function cambiarCantidad(idx, delta){
+  cart[idx].qty += delta;
+  if(cart[idx].qty <= 0){ cart.splice(idx, 1); }
+  renderCarrito();
+}
+
+function renderCarrito(){
+  const itemsDiv = document.getElementById('cartItems');
+  const totalNum = document.getElementById('cartTotalNum');
+  const count = document.getElementById('cartCount');
+  const confirmarBtn = document.getElementById('confirmarBtn');
+
+  count.textContent = cart.reduce((s,i)=>s+i.qty, 0);
+
+  if(cart.length === 0){
+    itemsDiv.innerHTML = '<p class="vacio">Tu carrito está vacío</p>';
+    totalNum.textContent = '$0';
+    confirmarBtn.disabled = true;
+    return;
+  }
+
+  confirmarBtn.disabled = false;
+  let total = 0;
+  itemsDiv.innerHTML = cart.map((item, idx) => {
+    const subtotal = item.precio * item.qty;
+    total += subtotal;
+    return `
+      <div class="cart-item">
+        <div class="info">
+          <div class="nombre">${item.nombre}</div>
+          ${item.opcionNombre ? `<div class="opcion">${item.opcionNombre}</div>` : ''}
+          ${item.sinPapas ? `<div class="opcion">Sin papas (+10 aros)</div>` : ''}
+          <div class="qty-controls">
+            <button onclick="cambiarCantidad(${idx}, -1)">−</button>
+            <span>${item.qty}</span>
+            <button onclick="cambiarCantidad(${idx}, 1)">+</button>
+          </div>
+        </div>
+        <div class="subtotal">$${subtotal.toLocaleString('es-AR')}</div>
+      </div>
+    `;
+  }).join('');
+
+  totalNum.textContent = '$' + total.toLocaleString('es-AR');
+}
+
+function abrirCarrito(){
+  document.getElementById('cartPanel').classList.add('open');
+  document.getElementById('overlay').classList.add('open');
+}
+function cerrarCarrito(){
+  document.getElementById('cartPanel').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+}
+
+async function confirmarPedido(){
+  const nombreCliente = document.getElementById('nombreCliente').value.trim();
+  const telefonoCliente = document.getElementById('telefonoCliente').value.trim();
+  if(!nombreCliente){
+    showToast('Escribí un nombre para el pedido 📝');
+    return;
+  }
+  if(!telefonoCliente){
+    showToast('Escribí un teléfono para avisar cuando esté listo 📱');
+    return;
+  }
+
+  const confirmarBtn = document.getElementById('confirmarBtn');
+  confirmarBtn.disabled = true;
+  confirmarBtn.textContent = 'Confirmando...';
+
+  const idOrden = (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString());
+
+  const errores = [];
+  for(const item of cart){
+    for(let i = 0; i < item.qty; i++){
+      const { error } = await sb.rpc('descontar_stock', {
+        p_id_variacion: item.id_variacion,
+        p_id_modificador: item.id_modificador,
+        p_nombre_cliente: nombreCliente,
+        p_id_orden: idOrden,
+        p_sin_papas: item.sinPapas || false,
+        p_telefono: telefonoCliente
+      });
+      if(error){ errores.push(item.nombre); }
+    }
+  }
+
+  if(errores.length > 0){
+    showToast('Sin stock suficiente para: ' + errores.join(', '));
+  } else {
+    showToast('¡Pedido de ' + nombreCliente + ' confirmado! 🎉');
+  }
+
+  cart = [];
+  document.getElementById('nombreCliente').value = '';
+  document.getElementById('telefonoCliente').value = '';
+  renderCarrito();
+  cerrarCarrito();
+  confirmarBtn.textContent = 'Confirmar pedido';
+  cargarMenu();
+}
+
+cargarMenu();
+renderCarrito();
+</script>
+</body>
+</html>
