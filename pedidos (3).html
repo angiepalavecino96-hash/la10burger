@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pedidos · La 10 Burger</title>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+  :root{
+    --bg:#0B0B0D; --panel:#15151A; --cream:#F5F1E6;
+    --sky:#6CACE4; --flame:#E8590C; --line:#2A2A30; --muted:#8A8A92;
+    --green:#25D366;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; background:var(--bg); color:var(--cream); font-family:'DM Sans', sans-serif; }
+
+  #loginScreen{ display:flex; align-items:center; justify-content:center; min-height:100vh; }
+  .login-box{
+    background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    padding:40px 32px; width:min(340px,90vw); text-align:center;
+  }
+  .login-box h2{ font-family:'Anton', sans-serif; letter-spacing:1px; text-transform:uppercase; margin:0 0 6px; font-size:22px; }
+  .login-box p{ color:var(--muted); font-size:13px; margin:0 0 24px; }
+  .login-box input{
+    width:100%; padding:11px 14px; background:var(--bg); border:1px solid var(--line);
+    color:var(--cream); border-radius:4px; font-family:'DM Sans'; font-size:14px; margin-bottom:12px;
+  }
+  .login-box input:focus{ outline:none; border-color:var(--sky); }
+  .login-box button{
+    width:100%; padding:12px; background:var(--sky); color:#0B0B0D; border:none;
+    border-radius:4px; font-family:'Anton', sans-serif; letter-spacing:1px; text-transform:uppercase;
+    font-size:14px; cursor:pointer;
+  }
+  .login-error{ color:var(--flame); font-size:13px; margin-top:10px; display:none; }
+
+  #appScreen{ display:none; }
+  .wrap{ max-width:780px; margin:0 auto; padding:40px 20px; }
+  .top-bar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+  h1{ font-family:'Anton', sans-serif; letter-spacing:1px; text-transform:uppercase; font-size:26px; margin:0; }
+  .btn-salir{
+    background:none; border:1px solid var(--line); color:var(--muted); padding:6px 14px;
+    border-radius:4px; font-family:'DM Sans'; font-size:13px; cursor:pointer;
+  }
+  .btn-salir:hover{ border-color:var(--flame); color:var(--flame); }
+  .sub{ color:var(--muted); margin:4px 0 20px; }
+  .total{
+    background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    padding:16px 20px; margin-bottom:24px; display:flex; justify-content:space-between; align-items:center;
+  }
+  .total .label{ color:var(--muted); font-size:13px; text-transform:uppercase; letter-spacing:1px; }
+  .total .num{ font-family:'Anton', sans-serif; color:var(--flame); font-size:24px; }
+  select{
+    background:var(--panel); color:var(--cream); border:1px solid var(--line);
+    padding:8px; border-radius:4px; font-family:'DM Sans'; font-size:13px; margin-bottom:16px;
+  }
+  .orden{
+    background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    padding:18px 20px; margin-bottom:14px;
+  }
+  .orden-header{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; flex-wrap:wrap; gap:6px; }
+  .orden-header .cliente{ font-family:'Anton', sans-serif; text-transform:uppercase; letter-spacing:0.5px; font-size:16px; }
+  .orden-header .fecha{ color:var(--muted); font-size:12px; }
+  .orden-items{ margin:0; padding:0; list-style:none; }
+  .orden-items li{ display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--line); font-size:14px; gap:8px; }
+  .orden-items li:last-child{ border-bottom:none; }
+  .detalle{ color:var(--muted); font-size:12px; display:block; }
+  .orden-footer{ display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding-top:12px; border-top:1px dashed var(--line); flex-wrap:wrap; gap:8px; }
+  .orden-total{ font-weight:700; font-size:15px; }
+  .orden-total span:last-child{ color:var(--flame); margin-left:6px; }
+  .btn-whatsapp{
+    display:inline-flex; align-items:center; gap:6px;
+    background:var(--green); color:#fff; border:none; border-radius:4px;
+    padding:8px 14px; font-family:'DM Sans'; font-size:13px; font-weight:700;
+    cursor:pointer; text-decoration:none; white-space:nowrap;
+  }
+  .btn-whatsapp:hover{ opacity:0.9; }
+  .vacio{ color:var(--muted); text-align:center; padding:40px 0; }
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-box">
+    <h2>Pedidos</h2>
+    <p>La 10 Burger — acceso restringido</p>
+    <input type="password" id="passInput" placeholder="Contraseña" onkeydown="if(event.key==='Enter') intentarLogin()">
+    <button onclick="intentarLogin()">Ingresar</button>
+    <p class="login-error" id="loginError">Contraseña incorrecta</p>
+  </div>
+</div>
+
+<div id="appScreen">
+  <div class="wrap">
+    <div class="top-bar">
+      <h1>Pedidos</h1>
+      <button class="btn-salir" onclick="cerrarSesion()">Salir</button>
+    </div>
+    <p class="sub">La 10 Burger — historial de ventas</p>
+
+    <select id="filtroFecha">
+      <option value="hoy">Hoy</option>
+      <option value="7dias">Últimos 7 días</option>
+      <option value="todos">Todos</option>
+    </select>
+
+    <div class="total">
+      <span class="label">Total vendido</span>
+      <span class="num" id="totalVendido">$0</span>
+    </div>
+
+    <div id="listaOrdenes"><p class="vacio">Cargando...</p></div>
+  </div>
+</div>
+
+<script>
+const PASSWORD_PEDIDOS = 'la10burger2024';
+const SESSION_KEY = 'la10_pedidos_auth';
+
+function intentarLogin(){
+  const pass = document.getElementById('passInput').value;
+  if(pass === PASSWORD_PEDIDOS){
+    sessionStorage.setItem(SESSION_KEY, '1');
+    mostrarApp();
+  } else {
+    document.getElementById('loginError').style.display = 'block';
+    document.getElementById('passInput').value = '';
+    document.getElementById('passInput').focus();
+  }
+}
+
+function cerrarSesion(){
+  sessionStorage.removeItem(SESSION_KEY);
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('passInput').value = '';
+}
+
+function mostrarApp(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+  cargarPedidos();
+}
+
+if(sessionStorage.getItem(SESSION_KEY) === '1') mostrarApp();
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function generarLinkWhatsapp(telefono, nombre, items, total) {
+  // Limpiar el número: sacar espacios, guiones, paréntesis y agregar código de país Argentina
+  let num = telefono.replace(/\D/g, '');
+  if(num.startsWith('0')) num = num.slice(1);
+  if(!num.startsWith('54')) num = '54' + num;
+
+  const detalle = items.map(it => {
+    const nombre_prod = it.productos_variaciones?.nombre_producto || it.nombre_producto || 'Producto';
+    const extra = it.sin_papas ? ' (reemplazar papas por aros)' : '';
+    return `• ${nombre_prod}${extra}`;
+  }).join('\n');
+
+  const mensaje =
+    `Hola ${nombre}! 👋 Recibimos tu pedido en *La 10 Burger*:\n\n` +
+    `${detalle}\n\n` +
+    `*Total: $${Number(total).toLocaleString('es-AR')}*\n\n` +
+    `¿Cómo lo preferís?\n` +
+    `🛵 Envío a domicilio\n` +
+    `🏃 Retiro en el local\n` +
+    `🪑 Comer acá\n\n` +
+    `Coordinamos pago y entrega! 🍔`;
+
+  return `https://wa.me/${num}?text=${encodeURIComponent(mensaje)}`;
+}
+
+async function cargarPedidos(){
+  const filtro = document.getElementById('filtroFecha').value;
+
+  let query = sb.from('pedidos')
+    .select('*, productos_variaciones(nombre_producto)')
+    .order('fecha', { ascending: false });
+
+  if(filtro === 'hoy'){
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    query = query.gte('fecha', hoy.toISOString());
+  } else if(filtro === '7dias'){
+    const hace7 = new Date(); hace7.setDate(hace7.getDate()-7);
+    query = query.gte('fecha', hace7.toISOString());
+  }
+
+  const { data, error } = await query;
+  const cont = document.getElementById('listaOrdenes');
+
+  if(error || !data){
+    cont.innerHTML = '<p class="vacio">Error al cargar pedidos: ' + (error?.message || 'desconocido') + '</p>';
+    return;
+  }
+
+  if(data.length === 0){
+    cont.innerHTML = '<p class="vacio">No hay pedidos en este período</p>';
+    document.getElementById('totalVendido').textContent = '$0';
+    return;
+  }
+
+  // Agrupar por id_orden
+  const grupos = {};
+  let totalGeneral = 0;
+
+  data.forEach(p => {
+    const clave = p.id_orden || ('pedido-' + p.id_pedido);
+    if(!grupos[clave]){
+      grupos[clave] = {
+        cliente: p.nombre_cliente || '(sin nombre)',
+        telefono: p.telefono || '',
+        fecha: p.fecha,
+        items: [],
+        total: 0
+      };
+    }
+    grupos[clave].items.push(p);
+    grupos[clave].total += Number(p.precio || 0);
+    totalGeneral += Number(p.precio || 0);
+  });
+
+  document.getElementById('totalVendido').textContent = '$' + totalGeneral.toLocaleString('es-AR');
+
+  cont.innerHTML = Object.values(grupos).map(g => {
+    const fecha = new Date(g.fecha).toLocaleString('es-AR', {
+      day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'
+    });
+    const linkWA = g.telefono ? generarLinkWhatsapp(g.telefono, g.cliente, g.items, g.total) : null;
+
+    return `
+      <div class="orden">
+        <div class="orden-header">
+          <span class="cliente">${g.cliente}</span>
+          <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            ${g.telefono ? `<span style="color:var(--sky); font-size:12px;">📱 ${g.telefono}</span>` : ''}
+            <span class="fecha">${fecha}</span>
+          </div>
+        </div>
+        <ul class="orden-items">
+          ${g.items.map(it => {
+            const nombre = it.productos_variaciones?.nombre_producto || it.nombre_producto || '(producto)';
+            return `<li>
+              <span>
+                ${nombre}
+                ${it.sin_papas ? `<span class="detalle">Reemplazar papas por aros</span>` : ''}
+              </span>
+              <span>$${Number(it.precio||0).toLocaleString('es-AR')}</span>
+            </li>`;
+          }).join('')}
+        </ul>
+        <div class="orden-footer">
+          <div class="orden-total"><span>Total</span><span>$${g.total.toLocaleString('es-AR')}</span></div>
+          ${linkWA ? `<a class="btn-whatsapp" href="${linkWA}" target="_blank">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            Confirmar por WhatsApp
+          </a>` : '<span style="color:var(--muted); font-size:12px;">Sin teléfono</span>'}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+document.getElementById('filtroFecha').addEventListener('change', cargarPedidos);
+</script>
+</body>
+</html>
